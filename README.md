@@ -136,3 +136,21 @@ Automated tests are not yet included. Recommended smoke checks:
 ## License
 
 MIT © StreamFlix Team
+
+# EKS Deployment
+
+## Architecture
+
+Amazon EKS & Helm.
+
+Components:
+
+- authService —  3001
+- streamingService —  3002
+- adminService —  3003
+- chatService — 3004
+- frontend —  80
+- MongoDB 27017
+
+
+
