@@ -130,3 +130,11 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Local/temporary files
+cookies.txt
+get_helm.sh
+
+# AWS IAM policy files
+iam_policy.json
+streamingapp-s3-policy.json

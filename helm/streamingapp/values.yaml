@@ -1,0 +1,65 @@
+namespace: streamingapp
+
+registry: 691317217805.dkr.ecr.ap-south-1.amazonaws.com
+
+images:
+  auth:
+    repository: streaming-auth
+    tag: "1.0.0"
+  streaming:
+    repository: streaming-service
+    tag: "1.0.0"
+  admin:
+    repository: streaming-admin
+    tag: "1.0.0"
+  chat:
+    repository: streaming-chat
+    tag: "1.0.0"
+  frontend:
+    repository: streaming-frontend
+    tag: "1.0.1"
+
+replicas:
+  auth: 2
+  streaming: 2
+  admin: 1
+  chat: 2
+  frontend: 2
+
+mongo:
+  image: mongo:6
+  storage: 5Gi
+  database: streamingapp
+
+config:
+  mongoUri: mongodb://mongo:27017/streamingapp
+  awsRegion: ap-south-1
+  awsS3Bucket: test-bucket-vin2
+  clientUrls: http://k8s-streamingapp-ac32464491-707536294.ap-south-1.elb.amazonaws.com
+
+secret:
+  jwtSecret: streamingapp-k8s-secret
+
+serviceAccounts:
+  admin: admin-service-account
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+mongoResources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+ingress:
+  enabled: true
+  scheme: internet-facing
+  targetType: ip

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat
+spec:
+  replicas: {{ .Values.replicas.chat }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: chat
+  template:
+    metadata:
+      labels:
+        app: chat
+    spec:
+      containers:
+        - name: chat
+          image: "{{ .Values.registry }}/{{ .Values.images.chat.repository }}:{{ .Values.images.chat.tag }}"
+          ports:
+            - containerPort: 3004
+          env:
+            - name: PORT
+              value: "3004"
+            - name: MONGO_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: MONGO_URI
+            - name: CLIENT_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CLIENT_URLS
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3004
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+{{ toYaml .Values.resources | indent 12 }}

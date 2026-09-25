@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streaming
+spec:
+  replicas: {{ .Values.replicas.streaming }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: streaming
+  template:
+    metadata:
+      labels:
+        app: streaming
+    spec:
+      containers:
+        - name: streaming
+          image: "{{ .Values.registry }}/{{ .Values.images.streaming.repository }}:{{ .Values.images.streaming.tag }}"
+          ports:
+            - containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+            - name: MONGO_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: MONGO_URI
+            - name: CLIENT_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: CLIENT_URLS
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_REGION
+            - name: AWS_S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: streamingapp-config
+                  key: AWS_S3_BUCKET
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: streamingapp-secret
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
