@@ -34,6 +34,8 @@ pipeline {
                         docker login \
                           --username AWS \
                           --password-stdin ${ECR_REGISTRY}
+
+                        echo "ECR login successful."
                     '''
                 }
             }
@@ -44,27 +46,49 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "Building authentication service..."
+                    echo "========================================"
+                    echo "Building authentication service"
+                    echo "========================================"
+
                     docker build \
                       -t ${ECR_REGISTRY}/streaming-auth:${IMAGE_TAG} \
                       ./backend/authService
 
-                    echo "Building streaming service..."
+
+                    echo "========================================"
+                    echo "Building streaming service"
+                    echo "========================================"
+
                     docker build \
+                      -f ./backend/streamingService/Dockerfile \
                       -t ${ECR_REGISTRY}/streaming-service:${IMAGE_TAG} \
-                      ./backend/streamingService
+                      ./backend
 
-                    echo "Building admin service..."
+
+                    echo "========================================"
+                    echo "Building admin service"
+                    echo "========================================"
+
                     docker build \
+                      -f ./backend/adminService/Dockerfile \
                       -t ${ECR_REGISTRY}/streaming-admin:${IMAGE_TAG} \
-                      ./backend/adminService
+                      ./backend
 
-                    echo "Building chat service..."
+
+                    echo "========================================"
+                    echo "Building chat service"
+                    echo "========================================"
+
                     docker build \
+                      -f ./backend/chatService/Dockerfile \
                       -t ${ECR_REGISTRY}/streaming-chat:${IMAGE_TAG} \
-                      ./backend/chatService
+                      ./backend
 
-                    echo "Building frontend..."
+
+                    echo "========================================"
+                    echo "Building frontend"
+                    echo "========================================"
+
                     docker build \
                       --build-arg REACT_APP_AUTH_API_URL=/api \
                       --build-arg REACT_APP_STREAMING_API_URL=/api \
@@ -75,7 +99,11 @@ pipeline {
                       -t ${ECR_REGISTRY}/streaming-frontend:${IMAGE_TAG} \
                       ./frontend
 
+
+                    echo "========================================"
                     echo "All five images built successfully."
+                    echo "Image tag: ${IMAGE_TAG}"
+                    echo "========================================"
                 '''
             }
         }
@@ -89,23 +117,30 @@ pipeline {
                     docker push \
                       ${ECR_REGISTRY}/streaming-auth:${IMAGE_TAG}
 
+
                     echo "Pushing streaming image..."
                     docker push \
                       ${ECR_REGISTRY}/streaming-service:${IMAGE_TAG}
+
 
                     echo "Pushing admin image..."
                     docker push \
                       ${ECR_REGISTRY}/streaming-admin:${IMAGE_TAG}
 
+
                     echo "Pushing chat image..."
                     docker push \
                       ${ECR_REGISTRY}/streaming-chat:${IMAGE_TAG}
+
 
                     echo "Pushing frontend image..."
                     docker push \
                       ${ECR_REGISTRY}/streaming-frontend:${IMAGE_TAG}
 
+
+                    echo "========================================"
                     echo "All five images pushed successfully."
+                    echo "========================================"
                 '''
             }
         }
@@ -119,11 +154,13 @@ pipeline {
 
         failure {
             echo 'StreamingApp CI/CD pipeline failed.'
+            echo "Check the Console Output for the failed stage."
         }
 
         always {
             echo "Build number: ${BUILD_NUMBER}"
             echo "ECR registry: ${ECR_REGISTRY}"
+            echo "Image tag: ${IMAGE_TAG}"
         }
     }
 }
