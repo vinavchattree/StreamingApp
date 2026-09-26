@@ -153,4 +153,227 @@ Components:
 - MongoDB 27017
 
 
+Helm :
+
+The Helm chart includes:
+•	Auth service
+•	Streaming service
+•	Admin service
+•	Chat service
+•	Frontend
+•	MongoDB StatefulSet
+•	ConfigMap and Secret
+•	MongoDB persistent storage
+•	AWS ALB Ingress
+•	WebSocket routing for Socket.IO
+•	Kubernetes service accounts
+•	Health checks and resource limits
+
+
+
+2. Create the Helm Chart Directory
+From the StreamingApp project directory:
+cd /home/ec2-user/streaming-app/StreamingApp
+Create the Helm chart structure:
+mkdir -p helm/streamingapp/templates
+cd helm/streamingapp
+
+
+
+3. Create Chart.yaml
+Create the Helm chart definition:
+cat > Chart.yaml <<'EOF'
+apiVersion: v2
+name: streamingapp
+description: Helm chart for StreamingApp MERN platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+EOF
+
+
+
+4.Create values.yaml
+values.yaml contains the configurable values used by the Kubernetes templates.
+cat > values.yaml <<'EOF'
+namespace: streamingapp
+
+registry: 691317217805.dkr.ecr.ap-south-1.amazonaws.com
+
+images:
+  auth:
+    repository: streaming-auth
+    tag: "1.0.0"
+  streaming:
+    repository: streaming-service
+    tag: "1.0.0"
+  admin:
+    repository: streaming-admin
+    tag: "1.0.0"
+  chat:
+    repository: streaming-chat
+    tag: "1.0.0"
+  frontend:
+    repository: streaming-frontend
+    tag: "1.0.1"
+
+replicas:
+  auth: 2
+  streaming: 2
+  admin: 1
+  chat: 2
+  frontend: 2
+
+mongo:
+  image: mongo:6
+  storage: 5Gi
+  database: streamingapp
+
+config:
+  mongoUri: mongodb://mongo:27017/streamingapp
+  awsRegion: ap-south-1
+  awsS3Bucket: test-bucket-vin2
+  clientUrls: http://localhost
+
+secret:
+  jwtSecret: streamingapp-k8s-secret
+
+serviceAccounts:
+  admin: admin-service-account
+
+resources:
+  requests:
+         cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+mongoResources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+ingress:
+  enabled: true
+  scheme: internet-facing
+  targetType: ip
+EOF
+
+
+5. ConfigMap
+   cat > templates/configmap.yaml <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: streamingapp-config
+data:
+  MONGO_URI: {{ .Values.config.mongoUri | quote }}
+  AWS_REGION: {{ .Values.config.awsRegion | quote }}
+  AWS_S3_BUCKET: {{ .Values.config.awsS3Bucket | quote }}
+  CLIENT_URLS: {{ .Values.config.clientUrls | quote }}
+EOF
+
+
+6. Create secret
+   cat > templates/secret.yaml <<'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: streamingapp-secret
+type: Opaque
+stringData:
+  JWT_SECRET: {{ .Values.secret.jwtSecret | quote }}
+EOF
+
+
+
+7. The application is exposed externally through an AWS Application Load Balancer (ALB).
+alb.ingress.kubernetes.io/scheme: internet-facing
+alb.ingress.kubernetes.io/target-type: ip
+alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+The Ingress uses:
+ingressClassName: alb
+
+
+    Request Routing
+Path	Kubernetes Service	Port
+/api/admin	admin	3003
+/api/streaming	streaming	3002
+/api/chat	chat	3004
+/socket.io	chat	3004
+/api	auth	3001
+/	frontend	80
+
+
+
+8. Verify the Helm Chart Structure
+find . -maxdepth 2 -type f | sort
+Expected structure:
+./Chart.yaml
+./values.yaml
+./templates/admin-deployment.yaml
+./templates/admin-service.yaml
+./templates/auth-deployment.yaml
+./templates/auth-service.yaml
+./templates/chat-deployment.yaml
+./templates/chat-service.yaml
+./templates/configmap.yaml
+./templates/frontend-deployment.yaml
+./templates/frontend-service.yaml
+./templates/ingress.yaml
+./templates/mongo-service.yaml
+./templates/mongo-statefulset.yaml
+./templates/secret.yaml
+./templates/streaming-deployment.yaml
+./templates/streaming-service.yaml
+
+
+9. Validate the Helm Chart
+Do not install the chart yet.
+First run Helm lint:
+helm lint .
+Then render the Kubernetes manifests locally:
+helm template streamingapp . > /tmp/streamingapp-rendered.yaml
+
+
+10. Install the Helm Release
+Once validation succeeds, install the application into EKS:
+helm install streamingapp . \
+  --namespace streamingapp \
+  --create-namespace
+Verify the Helm release:
+helm list -n streamingapp
+Check the deployed Kubernetes resources:
+kubectl get all -n streamingapp
+
+
+
+11. Verify the Ingress
+kubectl get ingress -n streamingapp
+The ALB hostname appear in the Ingress output under ADDRESS
+
+
+12. Access the Application
+Get the ALB address:
+kubectl get ingress streamingapp -n streamingapp
+Look for the ADDRESS value. It will be an AWS ALB DNS name similar to:
+xxxxx.ap-south-1.elb.amazonaws.com
+Open the application in a browser:
+http://<ALB-DNS-NAME>
+
+
+13. Final Verification
+kubectl get pods -n streamingapp
+kubectl get svc -n streamingapp
+kubectl get ingress -n streamingapp
+helm list -n streamingapp
+      └── ALB DNS
+
+
+
+
 
